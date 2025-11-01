@@ -71,16 +71,13 @@ const Runner = () => {
   };
 
   const recordGame = async (bet: number, payout: number) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    await supabase.from("game_history").insert({
-      user_id: user.id,
-      game_type: "runner",
-      bet_amount: bet,
-      payout: payout,
-      result: { score, timePlayed: 60 - timeLeft },
+    const { error } = await supabase.rpc("play_game", {
+      _game_type: "runner",
+      _bet_amount: bet,
+      _payout: payout,
+      _result: { score, time_played: 60 - timeLeft },
     });
+    if (error) throw error;
   };
 
   return (

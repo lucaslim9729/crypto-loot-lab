@@ -36,17 +36,20 @@ const Lottery = () => {
     }, 3000);
   };
 
+  // MISSION 3: Use atomic play_game RPC for balance locking
   const recordGame = async (bet: number, payout: number) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    await supabase.from("game_history").insert({
-      user_id: user.id,
-      game_type: "lottery",
-      bet_amount: bet,
-      payout: payout,
-      result: { tickets: ticketCount, won: payout > 0 },
+    const { error } = await supabase.rpc("play_game", {
+      _game_type: "lottery",
+      _bet_amount: bet,
+      _payout: payout,
+      _result: { tickets: ticketCount, won: payout > 0 },
     });
+    if (error) throw error;
+
+    if (error) {
+      toast.error(error.message);
+      throw error;
+    }
   };
 
   return (

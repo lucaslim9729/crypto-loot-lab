@@ -38,16 +38,13 @@ const Scratch = () => {
   };
 
   const recordGame = async (bet: number, payout: number) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    await supabase.from("game_history").insert({
-      user_id: user.id,
-      game_type: "scratch",
-      bet_amount: bet,
-      payout: payout,
-      result: { won: payout > 0, prize: payout },
+    const { error } = await supabase.rpc("play_game", {
+      _game_type: "scratch",
+      _bet_amount: bet,
+      _payout: payout,
+      _result: { prize: payout },
     });
+    if (error) throw error;
   };
 
   return (

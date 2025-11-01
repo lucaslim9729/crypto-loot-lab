@@ -60,16 +60,13 @@ const Chest = () => {
   };
 
   const recordGame = async (bet: number, payout: number, chestType: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    await supabase.from("game_history").insert({
-      user_id: user.id,
-      game_type: "chest",
-      bet_amount: bet,
-      payout: payout,
-      result: { chestType, won: payout > 0 },
+    const { error } = await supabase.rpc("play_game", {
+      _game_type: `chest_${chestType}`,
+      _bet_amount: bet,
+      _payout: payout,
+      _result: { chest_type: chestType, prize: payout > 0 ? "win" : "lose" },
     });
+    if (error) throw error;
   };
 
   return (

@@ -2,11 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, Trophy, Ticket, Gift, Zap } from "lucide-react";
-import heroImage from "@/assets/hero-bg.jpg";
-import lotteryIcon from "@/assets/lottery-icon.png";
-import scratchIcon from "@/assets/scratch-icon.png";
-import runnerIcon from "@/assets/runner-icon.png";
-import chestIcon from "@/assets/chest-icon.png";
+import Footer from "@/components/Footer";
+import heroImage from "@/assets/hero-winner.jpg";
+import lotteryPreview from "@/assets/lottery-preview.jpg";
+import scratchPreview from "@/assets/scratch-preview.jpg";
+import runnerPreview from "@/assets/runner-preview.jpg";
+import chestPreview from "@/assets/chest-preview.jpg";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -16,28 +17,28 @@ const Index = () => {
       id: "lottery",
       title: "Lottery",
       description: "Scheduled draws with big prizes",
-      icon: lotteryIcon,
+      preview: lotteryPreview,
       path: "/games/lottery",
     },
     {
       id: "scratch",
       title: "Scratch Card",
       description: "Instant win prizes",
-      icon: scratchIcon,
+      preview: scratchPreview,
       path: "/games/scratch",
     },
     {
       id: "runner",
       title: "Endless Runner",
       description: "Collect coins and multipliers",
-      icon: runnerIcon,
+      preview: runnerPreview,
       path: "/games/runner",
     },
     {
       id: "chest",
       title: "Mystery Chest",
       description: "Open chests for rewards",
-      icon: chestIcon,
+      preview: chestPreview,
       path: "/games/chest",
     },
   ];
@@ -53,33 +54,34 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section
-        className="relative h-screen flex items-center justify-center overflow-visible"
+        className="relative h-screen flex items-center justify-center overflow-hidden"
         style={{
-          backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.5), rgba(15, 23, 42, 0.7)), url(${heroImage})`,
+          backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.3), rgba(15, 23, 42, 0.6)), url(${heroImage})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       >
-        <div className="container mx-auto px-4 text-center z-101">
-          <h1 className="text-6xl md:text-8xl font-bold mb-6 bg-gradient-primary bg-clip-text text-transparent animate-fade-in leading-tight py-5">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/80" />
+        <div className="container mx-auto px-4 text-center z-10 relative">
+          <h1 className="text-6xl md:text-8xl font-bold mb-6 bg-gradient-primary bg-clip-text text-golden text-transparent animate-fade-in leading-tight py-5 drop-shadow-lg">
             Win Big with Crypto!
           </h1>
-          <p className="text-xl md:text-2xl text-foreground/80 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-foreground mb-8 max-w-2xl mx-auto font-semibold drop-shadow-md">
             The future of online gaming. Play fair, win big, withdraw instantly.
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
             <Button
               size="lg"
-              className="bg-gradient-primary text-primary-foreground hover:shadow-glow-primary text-lg px-8"
+              className="bg-gradient-primary text-primary-foreground hover:shadow-glow-primary text-lg px-8 animate-scale-in shadow-lg hover:scale-110 transition-transform"
               onClick={() => navigate("/auth")}
             >
-              <Zap className="mr-2 h-5 w-5" />
-              Start Playing
+              <Zap className="mr-2 h-6 w-6 icon-accent" />
+              Start Winning Now
             </Button>
             <Button
               size="lg"
               variant="outline"
-              className="border-primary text-lg px-8"
+              className="border-primary border-2 text-lg px-8 hover:bg-primary/35 hover:text-primary backdrop-blur-sm"
               onClick={() => navigate("/dashboard")}
             >
               View Dashboard
@@ -102,22 +104,30 @@ const Index = () => {
             {games.map((game) => (
               <Card
                 key={game.id}
-                className="group bg-gradient-card border-border p-6 hover:scale-105 transition-all duration-300 hover:shadow-glow-primary cursor-pointer"
+                className="group bg-gradient-card border-border overflow-hidden hover:scale-105 transition-all duration-300 hover:shadow-glow-primary cursor-pointer"
                 onClick={() => navigate(game.path)}
               >
-                <div className="relative mb-4">
+                <div className="relative h-48 overflow-hidden">
                   <img
-                    src={game.icon}
+                    src={game.preview}
                     alt={game.title}
-                    className="w-24 h-24 mx-auto rounded-2xl group-hover:animate-float"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
                 </div>
-                <h3 className="text-2xl font-bold text-center mb-2 text-foreground">
-                  {game.title}
-                </h3>
-                <p className="text-center text-muted-foreground">
-                  {game.description}
-                </p>
+                <div className="p-6">
+                  <h3 className="text-2xl font-bold text-center mb-2 text-foreground group-hover:text-primary transition-colors">
+                    {game.title}
+                  </h3>
+                  <p className="text-center text-muted-foreground">
+                    {game.description}
+                  </p>
+                  <div className="mt-4 text-center">
+                    <span className="text-accent font-semibold group-hover:underline">
+                      Play Now →
+                    </span>
+                  </div>
+                </div>
               </Card>
             ))}
           </div>
@@ -135,9 +145,12 @@ const Index = () => {
             {features.map((feature, i) => (
               <Card
                 key={i}
-                className="bg-gradient-card border-border p-6 text-center hover:scale-105 transition-all"
+                className="bg-gradient-card border-border p-6 text-center hover:scale-105 transition-all hover:shadow-glow-primary group"
               >
-                <feature.icon className="h-12 w-12 mx-auto mb-4 text-primary" />
+                <div className="relative inline-block">
+                  <div className="absolute inset-0 bg-gradient-primary rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity"></div>
+                  <feature.icon className="h-16 w-16 mx-auto mb-4 text-primary relative z-10 icon-gradient" />
+                </div>
                 <h3 className="text-xl font-bold mb-2 text-foreground">
                   {feature.title}
                 </h3>
@@ -166,6 +179,8 @@ const Index = () => {
           </Button>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 };

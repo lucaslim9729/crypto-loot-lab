@@ -8,6 +8,26 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ArrowLeft, Shield, Clock, AlertCircle, Wallet, TrendingUp, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { z } from "zod";
+
+// MISSION 2: Cryptocurrency address validation
+const isTronAddress = (addr: string) => /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(addr);
+const isBscAddress = (addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr);
+
+// MISSION 6: Comprehensive numeric validation for withdrawals
+const withdrawSchema = z.object({
+  amount: z.number()
+    .positive("Amount must be positive")
+    .finite("Amount must be a valid number")
+    .min(10, "Minimum withdrawal is $10")
+    .max(1000000, "Maximum withdrawal is $1,000,000")
+    .transform(val => Math.round(val * 100) / 100),
+  walletAddress: z.string()
+    .trim()
+    .min(34, "Wallet address is too short")
+    .max(42, "Wallet address is too long"),
+  network: z.enum(["TRC-20", "BEP-20"]),
+});
 
 const Withdraw = () => {
   const navigate = useNavigate();
@@ -82,19 +102,34 @@ const Withdraw = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!withdrawAmount || withdrawAmount < selectedNetworkData.minWithdraw) {
-      toast.error(`Minimum withdrawal is $${selectedNetworkData.minWithdraw}`);
+
+    // Validate wallet address format based on network
+    if (selectedNetwork === "TRC-20" && !isTronAddress(walletAddress.trim())) {
+      toast.error("Invalid Tron (TRC-20) wallet address. Must start with 'T' and be 34 characters.");
       return;
     }
 
-    if (withdrawAmount > balance) {
-      toast.error("Insufficient balance");
+    if (selectedNetwork === "BEP-20" && !isBscAddress(walletAddress.trim())) {
+      toast.error("Invalid BSC (BEP-20) wallet address. Must start with '0x' and be 42 characters.");
       return;
     }
 
-    if (!walletAddress.trim()) {
-      toast.error("Please enter your wallet address");
+    // Validate with zod schema
+    const validation = withdrawSchema.safeParse({
+      amount: parseFloat(amount),
+      walletAddress: walletAddress,
+      network: selectedNetwork,
+    });
+
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
+      return;
+    }
+
+    const { amount: validatedAmount, walletAddress: validatedAddress } = validation.data;
+
+    if (validatedAmount > balance) {
+      toast.error(`Insufficient balance. You have $${balance.toFixed(2)}`);
       return;
     }
 
@@ -103,16 +138,16 @@ const Withdraw = () => {
     try {
       const { error } = await supabase.from("withdrawals").insert({
         user_id: user.id,
-        amount: withdrawAmount,
+        amount: validatedAmount,
         currency: "USDT",
         network: selectedNetwork,
-        wallet_address: walletAddress,
+        wallet_address: validatedAddress,
         status: "pending",
       });
 
       if (error) throw error;
 
-      toast.success("Withdrawal request submitted! Processing in progress...");
+      toast.success("Withdrawal request submitted!");
       setAmount("");
       setWalletAddress("");
       
@@ -167,10 +202,13 @@ const Withdraw = () => {
 
         {/* Account Summary */}
         <div className="grid md:grid-cols-3 gap-4 mb-8">
-          <Card className="bg-gradient-card border-border">
+          <Card className="bg-gradient-card border-border hover:scale-105 transition-all group">
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <Wallet className="h-8 w-8 text-primary" />
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-primary rounded-full blur-lg opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                  <Wallet className="h-10 w-10 text-primary relative z-10 icon-gradient" />
+                </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Available Balance</p>
                   <p className="text-2xl font-bold text-foreground">${balance.toFixed(2)}</p>
@@ -179,10 +217,13 @@ const Withdraw = () => {
             </CardContent>
           </Card>
           
-          <Card className="bg-gradient-card border-border">
+          <Card className="bg-gradient-card border-border hover:scale-105 transition-all group">
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <TrendingUp className="h-8 w-8 text-accent" />
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-gold rounded-full blur-lg opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                  <TrendingUp className="h-10 w-10 text-accent relative z-10 icon-accent" />
+                </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Wagered</p>
                   <p className="text-2xl font-bold text-foreground">${totalWagered.toFixed(2)}</p>
@@ -191,10 +232,13 @@ const Withdraw = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-card border-border">
+          <Card className="bg-gradient-card border-border hover:scale-105 transition-all group">
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <Trophy className="h-8 w-8 text-primary" />
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-primary rounded-full blur-lg opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                  <Trophy className="h-10 w-10 text-primary relative z-10 icon-gradient" />
+                </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Won</p>
                   <p className="text-2xl font-bold text-foreground">${totalWon.toFixed(2)}</p>
@@ -241,15 +285,15 @@ const Withdraw = () => {
               {/* Security Features */}
               <div className="mt-6 space-y-4">
                 <div className="flex items-center gap-3 text-sm">
-                  <Shield className="h-5 w-5 text-primary" />
+                  <Shield className="h-6 w-6 text-primary icon-gradient" />
                   <span className="text-muted-foreground">Multi-signature wallets</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
-                  <Clock className="h-5 w-5 text-primary" />
+                  <Clock className="h-6 w-6 text-primary icon-gradient" />
                   <span className="text-muted-foreground">Fast processing times</span>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
-                  <Shield className="h-5 w-5 text-primary" />
+                  <Shield className="h-6 w-6 text-primary icon-gradient" />
                   <span className="text-muted-foreground">24/7 Support</span>
                 </div>
               </div>

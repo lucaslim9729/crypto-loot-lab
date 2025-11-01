@@ -1,1 +1,10 @@
-project_id = "wuxdmpytxxsqganrlnjk"
+project_id = "crhmgsmprzcsgbypvhvz"
+
+[functions.send-lucky-day-email]
+verify_jwt = true
+
+[functions.send-verification-code]
+verify_jwt = false
+
+[functions.verify-code]
+verify_jwt = false

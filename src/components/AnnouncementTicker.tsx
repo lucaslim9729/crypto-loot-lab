@@ -50,7 +50,7 @@ export const AnnouncementTicker = () => {
   return (
     <div className="bg-gradient-primary text-primary-foreground py-2 px-4 overflow-hidden">
       <div className="flex items-center gap-4">
-        <TrendingUp className="h-5 w-5 flex-shrink-0" />
+        <TrendingUp className="h-6 w-6 flex-shrink-0 animate-pulse" />
         <div className="flex-1 overflow-hidden">
           <div className="animate-marquee whitespace-nowrap inline-block">
             {announcements.map((announcement, i) => (

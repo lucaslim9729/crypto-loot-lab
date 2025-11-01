@@ -44,6 +44,9 @@ All colors MUST be HSL.
     
     --glow-primary: 0 0 40px hsl(250 95% 75% / 0.3);
     --glow-accent: 0 0 40px hsl(45 93% 57% / 0.3);
+    
+    --icon-glow-primary: drop-shadow(0 0 8px hsl(250 95% 75% / 0.6));
+    --icon-glow-accent: drop-shadow(0 0 8px hsl(45 93% 57% / 0.6));
 
     --sidebar-background: 217 33% 14%;
     --sidebar-foreground: 210 40% 98%;
@@ -63,5 +66,25 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+  
+  .icon-gradient {
+    filter: var(--icon-glow-primary);
+    transition: all 0.3s ease;
+  }
+  
+  .icon-gradient:hover {
+    filter: var(--icon-glow-primary) brightness(1.2);
+    transform: scale(1.1);
+  }
+  
+  .icon-accent {
+    filter: var(--icon-glow-accent);
+    transition: all 0.3s ease;
+  }
+  
+  .icon-accent:hover {
+    filter: var(--icon-glow-accent) brightness(1.2);
+    transform: scale(1.1);
   }
 }
