@@ -17,34 +17,38 @@ const Scratch = () => {
     setIsScratching(true);
     setRevealed(false);
 
-    // Simulate scratch animation
-    setTimeout(() => {
-      const won = Math.random() > 0.6; // 40% win rate
-      const payout = won ? cardPrice * (1.5 + Math.random() * 4) : 0;
+    try {
+      // Call secure edge function - server determines outcome
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await supabase.functions.invoke('play-scratch', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
 
-      setPrize(payout);
-      setRevealed(true);
-      setIsScratching(false);
-
-      // Record game
-      recordGame(cardPrice, payout);
-
-      if (won) {
-        toast.success(`🎉 You won $${payout.toFixed(2)}!`);
-      } else {
-        toast.error("Try again!");
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to play scratch card');
       }
-    }, 2000);
-  };
 
-  const recordGame = async (bet: number, payout: number) => {
-    const { error } = await supabase.rpc("play_game", {
-      _game_type: "scratch",
-      _bet_amount: bet,
-      _payout: payout,
-      _result: { prize: payout },
-    });
-    if (error) throw error;
+      const { won, payout } = response.data;
+
+      // Simulate scratch animation
+      setTimeout(() => {
+        setPrize(payout);
+        setRevealed(true);
+        setIsScratching(false);
+
+        if (won) {
+          toast.success(`🎉 You won $${payout.toFixed(2)}!`);
+        } else {
+          toast.error("Try again!");
+        }
+      }, 2000);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to play scratch card');
+      setIsScratching(false);
+      setRevealed(false);
+    }
   };
 
   return (

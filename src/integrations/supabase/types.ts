@@ -120,33 +120,6 @@ export type Database = {
           },
         ]
       }
-      messages: {
-        Row: {
-          content: string
-          created_at: string | null
-          edited_at: string | null
-          id: string
-          is_deleted: boolean | null
-          user_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string | null
-          edited_at?: string | null
-          id?: string
-          is_deleted?: boolean | null
-          user_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string | null
-          edited_at?: string | null
-          id?: string
-          is_deleted?: boolean | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           balance: number
@@ -352,60 +325,6 @@ export type Database = {
           },
         ]
       }
-      user_roles: {
-        Row: {
-          granted_at: string | null
-          granted_by: string | null
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Insert: {
-          granted_at?: string | null
-          granted_by?: string | null
-          id?: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
-        Update: {
-          granted_at?: string | null
-          granted_by?: string | null
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
-        Relationships: []
-      }
-      verification_codes: {
-        Row: {
-          code: string
-          created_at: string | null
-          email: string
-          expires_at: string
-          id: string
-          ip_address: string | null
-          used: boolean | null
-        }
-        Insert: {
-          code: string
-          created_at?: string | null
-          email: string
-          expires_at: string
-          id?: string
-          ip_address?: string | null
-          used?: boolean | null
-        }
-        Update: {
-          code?: string
-          created_at?: string | null
-          email?: string
-          expires_at?: string
-          id?: string
-          ip_address?: string | null
-          used?: boolean | null
-        }
-        Relationships: []
-      }
       withdrawals: {
         Row: {
           amount: number
@@ -452,39 +371,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      cleanup_expired_verification_codes: { Args: never; Returns: undefined }
       generate_referral_code: { Args: never; Returns: string }
-      get_user_stats: {
-        Args: { _user_id?: string }
-        Returns: {
-          balance: number
-          games_played: number
-          id: string
-          referrals_count: number
-          total_wagered: number
-          total_won: number
-          username: string
-        }[]
-      }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      play_game: {
-        Args: {
-          _bet_amount: number
-          _game_type: string
-          _payout: number
-          _result?: Json
-        }
-        Returns: string
+      process_withdrawal: {
+        Args: { _amount: number; _user_id: string; _withdrawal_id: string }
+        Returns: undefined
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -611,8 +505,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      app_role: ["admin", "moderator", "user"],
-    },
+    Enums: {},
   },
 } as const

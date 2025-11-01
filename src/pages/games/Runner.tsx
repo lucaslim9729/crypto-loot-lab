@@ -55,29 +55,34 @@ const Runner = () => {
     setIsPlaying(false);
 
     const timePlayed = 60 - timeLeft;
-    const totalCost = timePlayed * costPerSecond;
-    const payout = score / 10; // Convert score to money
 
-    await recordGame(totalCost, payout);
+    try {
+      // Call secure edge function - server validates and records game
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await supabase.functions.invoke('play-runner', {
+        body: { timePlayed, score },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
 
-    if (payout > totalCost) {
-      toast.success(`🎉 You won $${(payout - totalCost).toFixed(2)}!`);
-    } else {
-      toast.error(`You lost $${(totalCost - payout).toFixed(2)}`);
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to record game');
+      }
+
+      const { won, payout, totalCost } = response.data;
+
+      if (won) {
+        toast.success(`🎉 You won $${(payout - totalCost).toFixed(2)}!`);
+      } else {
+        toast.error(`You lost $${(totalCost - payout).toFixed(2)}`);
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to record game');
     }
 
     setScore(0);
     setTimeLeft(60);
-  };
-
-  const recordGame = async (bet: number, payout: number) => {
-    const { error } = await supabase.rpc("play_game", {
-      _game_type: "runner",
-      _bet_amount: bet,
-      _payout: payout,
-      _result: { score, time_played: 60 - timeLeft },
-    });
-    if (error) throw error;
   };
 
   return (

@@ -14,41 +14,36 @@ const Lottery = () => {
   const ticketPrice = 10;
 
   const handleBuyTickets = async () => {
-    const totalCost = ticketPrice * ticketCount;
-    
     setIsDrawing(true);
     
-    // Simulate drawing animation
-    setTimeout(() => {
-      const won = Math.random() > 0.7; // 30% win rate
-      const payout = won ? totalCost * (2 + Math.random() * 3) : 0;
+    try {
+      // Call secure edge function - server determines outcome
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await supabase.functions.invoke('play-lottery', {
+        body: { ticketCount },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
 
-      // Record game
-      recordGame(totalCost, payout);
-
-      if (won) {
-        toast.success(`🎉 You won $${payout.toFixed(2)}!`);
-      } else {
-        toast.error("Better luck next time!");
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to play lottery');
       }
 
+      const { won, payout } = response.data;
+
+      // Simulate drawing animation
+      setTimeout(() => {
+        if (won) {
+          toast.success(`🎉 You won $${payout.toFixed(2)}!`);
+        } else {
+          toast.error("Better luck next time!");
+        }
+        setIsDrawing(false);
+      }, 3000);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to play lottery');
       setIsDrawing(false);
-    }, 3000);
-  };
-
-  // MISSION 3: Use atomic play_game RPC for balance locking
-  const recordGame = async (bet: number, payout: number) => {
-    const { error } = await supabase.rpc("play_game", {
-      _game_type: "lottery",
-      _bet_amount: bet,
-      _payout: payout,
-      _result: { tickets: ticketCount, won: payout > 0 },
-    });
-    if (error) throw error;
-
-    if (error) {
-      toast.error(error.message);
-      throw error;
     }
   };
 
