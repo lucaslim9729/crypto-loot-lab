@@ -7,22 +7,25 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Send, Trash2 } from "lucide-react";
 
-interface Message {
+interface DirectMessage {
   id: string;
-  user_id: string;
-  message: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
   created_at: string;
-  profiles: {
-    username: string;
-  };
+  is_read: boolean;
 }
 
-export const Chat = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+interface DirectMessagesProps {
+  otherUserId: string;
+  otherUsername: string;
+}
+
+export const DirectMessages = ({ otherUserId, otherUsername }: DirectMessagesProps) => {
+  const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -30,7 +33,7 @@ export const Chat = () => {
     checkUser();
     fetchMessages();
     subscribeToMessages();
-  }, []);
+  }, [otherUserId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -40,23 +43,18 @@ export const Chat = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       setCurrentUserId(user.id);
-      
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
-      
-      setIsAdmin(roles?.some(r => r.role === "admin") || false);
     }
   };
 
   const fetchMessages = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
     const { data, error } = await supabase
-      .from("messages")
-      .select("id, user_id, message, created_at")
-      .eq("is_deleted", false)
-      .order("created_at", { ascending: true })
-      .limit(100);
+      .from("direct_messages")
+      .select("*")
+      .or(`and(sender_id.eq.${user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${user.id})`)
+      .order("created_at", { ascending: true });
 
     if (error) {
       console.error("Error fetching messages:", error);
@@ -68,63 +66,44 @@ export const Chat = () => {
       return;
     }
 
-    // Fetch profiles separately
-    if (data && data.length > 0) {
-      const userIds = [...new Set(data.map(m => m.user_id))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, username")
-        .in("id", userIds);
+    setMessages(data || []);
 
-      const profileMap = new Map(profiles?.map(p => [p.id, p.username]) || []);
-      
-      const messagesWithProfiles = data.map(msg => ({
-        ...msg,
-        profiles: { username: profileMap.get(msg.user_id) || "Unknown" }
-      }));
-
-      setMessages(messagesWithProfiles);
-    }
+    // Mark messages as read
+    await supabase
+      .from("direct_messages")
+      .update({ is_read: true })
+      .eq("receiver_id", user.id)
+      .eq("sender_id", otherUserId)
+      .eq("is_read", false);
   };
 
   const subscribeToMessages = () => {
     const channel = supabase
-      .channel("messages-channel")
+      .channel("direct-messages-channel")
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
-          table: "messages",
+          table: "direct_messages",
         },
         async (payload) => {
-          // Fetch the profile data for the new message
-          const { data } = await supabase
-            .from("profiles")
-            .select("username")
-            .eq("id", payload.new.user_id)
-            .single();
-
-          const newMsg = {
-            ...payload.new,
-            profiles: { username: data?.username || "Unknown" },
-          } as Message;
-
-          setMessages((current) => [...current, newMsg]);
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "messages",
-        },
-        (payload) => {
-          if (payload.new.is_deleted) {
-            setMessages((current) =>
-              current.filter((msg) => msg.id !== payload.new.id)
-            );
+          const newMsg = payload.new as DirectMessage;
+          
+          // Only add if it's related to this conversation
+          if (
+            (newMsg.sender_id === otherUserId && newMsg.receiver_id === currentUserId) ||
+            (newMsg.sender_id === currentUserId && newMsg.receiver_id === otherUserId)
+          ) {
+            setMessages((current) => [...current, newMsg]);
+            
+            // Mark as read if we're the receiver
+            if (newMsg.receiver_id === currentUserId) {
+              await supabase
+                .from("direct_messages")
+                .update({ is_read: true })
+                .eq("id", newMsg.id);
+            }
           }
         }
       )
@@ -137,15 +116,16 @@ export const Chat = () => {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || loading) return;
+    if (!newMessage.trim() || loading || !currentUserId) return;
 
     setLoading(true);
     const messageContent = newMessage.trim();
     setNewMessage("");
 
-    const { error } = await supabase.from("messages").insert({
-      user_id: currentUserId,
-      message: messageContent,
+    const { error } = await supabase.from("direct_messages").insert({
+      sender_id: currentUserId,
+      receiver_id: otherUserId,
+      content: messageContent,
     });
 
     if (error) {
@@ -159,21 +139,6 @@ export const Chat = () => {
     }
 
     setLoading(false);
-  };
-
-  const deleteMessage = async (messageId: string) => {
-    const { error } = await supabase
-      .from("messages")
-      .update({ is_deleted: true })
-      .eq("id", messageId);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete message",
-        variant: "destructive",
-      });
-    }
   };
 
   const scrollToBottom = () => {
@@ -193,16 +158,13 @@ export const Chat = () => {
   return (
     <div className="flex flex-col h-[600px] bg-card rounded-lg border shadow-sm">
       <div className="p-4 border-b">
-        <h2 className="text-xl font-bold">Global Chat</h2>
-        <p className="text-sm text-muted-foreground">
-          Chat with other players
-        </p>
+        <h2 className="text-xl font-bold">Chat with {otherUsername}</h2>
       </div>
 
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         <div className="space-y-4">
           {messages.map((message) => {
-            const isOwn = message.user_id === currentUserId;
+            const isOwn = message.sender_id === currentUserId;
             return (
               <div
                 key={message.id}
@@ -210,38 +172,26 @@ export const Chat = () => {
               >
                 <Avatar className="h-8 w-8 shrink-0">
                   <AvatarFallback className="text-xs bg-primary/20 text-primary">
-                    {message.profiles?.username?.[0]?.toUpperCase() || "?"}
+                    {isOwn ? "You" : otherUsername[0]?.toUpperCase() || "?"}
                   </AvatarFallback>
                 </Avatar>
                 <div className={`flex flex-col ${isOwn ? "items-end" : ""}`}>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">
-                      {message.profiles?.username || "Unknown"}
+                      {isOwn ? "You" : otherUsername}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {formatTime(message.created_at)}
                     </span>
                   </div>
-                  <div className="group relative">
-                    <div
-                      className={`mt-1 px-3 py-2 rounded-lg max-w-md break-words ${
-                        isOwn
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-secondary"
-                      }`}
-                    >
-                      {message.message}
-                    </div>
-                    {(isOwn || isAdmin) && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute -right-8 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => deleteMessage(message.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
+                  <div
+                    className={`mt-1 px-3 py-2 rounded-lg max-w-md break-words ${
+                      isOwn
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary"
+                    }`}
+                  >
+                    {message.content}
                   </div>
                 </div>
               </div>
