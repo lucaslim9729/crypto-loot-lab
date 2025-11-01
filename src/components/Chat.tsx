@@ -10,7 +10,7 @@ import { Send, Trash2 } from "lucide-react";
 interface Message {
   id: string;
   user_id: string;
-  content: string;
+  message: string;
   created_at: string;
   profiles: {
     username: string;
@@ -53,7 +53,7 @@ export const Chat = () => {
   const fetchMessages = async () => {
     const { data, error } = await supabase
       .from("messages")
-      .select("id, user_id, content, created_at")
+      .select("id, user_id, message, created_at")
       .eq("is_deleted", false)
       .order("created_at", { ascending: true })
       .limit(100);
@@ -145,7 +145,7 @@ export const Chat = () => {
 
     const { error } = await supabase.from("messages").insert({
       user_id: currentUserId,
-      content: messageContent,
+      message: messageContent,
     });
 
     if (error) {
@@ -230,7 +230,7 @@ export const Chat = () => {
                           : "bg-secondary"
                       }`}
                     >
-                      {message.content}
+                      {message.message}
                     </div>
                     {(isOwn || isAdmin) && (
                       <Button

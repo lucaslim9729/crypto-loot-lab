@@ -120,6 +120,30 @@ export type Database = {
           },
         ]
       }
+      messages: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_deleted: boolean | null
+          message: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          message: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          message?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           balance: number
@@ -325,6 +349,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       withdrawals: {
         Row: {
           amount: number
@@ -372,13 +417,29 @@ export type Database = {
     }
     Functions: {
       generate_referral_code: { Args: never; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      play_game: {
+        Args: {
+          _bet_amount: number
+          _game_type: string
+          _payout: number
+          _result: Json
+        }
+        Returns: undefined
+      }
       process_withdrawal: {
         Args: { _amount: number; _user_id: string; _withdrawal_id: string }
         Returns: undefined
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -505,6 +566,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
