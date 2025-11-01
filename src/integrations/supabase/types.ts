@@ -122,24 +122,27 @@ export type Database = {
       }
       messages: {
         Row: {
+          content: string
           created_at: string | null
+          edited_at: string | null
           id: string
           is_deleted: boolean | null
-          message: string
           user_id: string
         }
         Insert: {
+          content: string
           created_at?: string | null
+          edited_at?: string | null
           id?: string
           is_deleted?: boolean | null
-          message: string
           user_id: string
         }
         Update: {
+          content?: string
           created_at?: string | null
+          edited_at?: string | null
           id?: string
           is_deleted?: boolean | null
-          message?: string
           user_id?: string
         }
         Relationships: []
@@ -351,22 +354,55 @@ export type Database = {
       }
       user_roles: {
         Row: {
-          created_at: string | null
+          granted_at: string | null
+          granted_by: string | null
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
-          created_at?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
-          created_at?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      verification_codes: {
+        Row: {
+          code: string
+          created_at: string | null
+          email: string
+          expires_at: string
+          id: string
+          ip_address: string | null
+          used: boolean | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          email: string
+          expires_at: string
+          id?: string
+          ip_address?: string | null
+          used?: boolean | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          used?: boolean | null
         }
         Relationships: []
       }
@@ -416,7 +452,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_verification_codes: { Args: never; Returns: undefined }
       generate_referral_code: { Args: never; Returns: string }
+      get_user_stats: {
+        Args: { _user_id?: string }
+        Returns: {
+          balance: number
+          games_played: number
+          id: string
+          referrals_count: number
+          total_wagered: number
+          total_won: number
+          username: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -429,13 +478,9 @@ export type Database = {
           _bet_amount: number
           _game_type: string
           _payout: number
-          _result: Json
+          _result?: Json
         }
-        Returns: undefined
-      }
-      process_withdrawal: {
-        Args: { _amount: number; _user_id: string; _withdrawal_id: string }
-        Returns: undefined
+        Returns: string
       }
     }
     Enums: {

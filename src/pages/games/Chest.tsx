@@ -23,43 +23,50 @@ const Chest = () => {
     setIsOpening(true);
     setOpened(false);
 
-    try {
-      // Call secure edge function - server determines outcome
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await supabase.functions.invoke('play-chest', {
-        body: { 
-          tierName: tier.name,
-          tierPrice: tier.price,
-          maxMultiplier: tier.maxMultiplier
-        },
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-      });
+    // Simulate chest opening animation
+    setTimeout(() => {
+      const won = Math.random() > 0.5; // 50% win rate
+      
+      let prizeAmount = 0;
+      let prizeType = "Nothing";
 
-      if (response.error) {
-        throw new Error(response.error.message || 'Failed to open chest');
+      if (won) {
+        const multiplier = 0.5 + Math.random() * tier.maxMultiplier;
+        prizeAmount = tier.price * multiplier;
+        
+        // Determine prize type based on amount
+        if (multiplier > tier.maxMultiplier * 0.8) {
+          prizeType = "USDT";
+        } else if (multiplier > tier.maxMultiplier * 0.5) {
+          prizeType = "BTC";
+        } else {
+          prizeType = "Bonus Coins";
+        }
       }
 
-      const { won, prizeAmount, prizeType } = response.data;
-
-      // Simulate chest opening animation
-      setTimeout(() => {
-        setPrize({ amount: prizeAmount, type: prizeType });
-        setOpened(true);
-        setIsOpening(false);
-
-        if (won) {
-          toast.success(`🎉 You won ${prizeType}: $${prizeAmount.toFixed(2)}!`);
-        } else {
-          toast.error("Empty chest! Try again!");
-        }
-      }, 3000);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to open chest');
+      setPrize({ amount: prizeAmount, type: prizeType });
+      setOpened(true);
       setIsOpening(false);
-      setOpened(false);
-    }
+
+      // Record game
+      recordGame(tier.price, prizeAmount, tier.name);
+
+      if (won) {
+        toast.success(`🎉 You won ${prizeType}: $${prizeAmount.toFixed(2)}!`);
+      } else {
+        toast.error("Empty chest! Try again!");
+      }
+    }, 3000);
+  };
+
+  const recordGame = async (bet: number, payout: number, chestType: string) => {
+    const { error } = await supabase.rpc("play_game", {
+      _game_type: `chest_${chestType}`,
+      _bet_amount: bet,
+      _payout: payout,
+      _result: { chest_type: chestType, prize: payout > 0 ? "win" : "lose" },
+    });
+    if (error) throw error;
   };
 
   return (

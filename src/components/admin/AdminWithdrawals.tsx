@@ -55,27 +55,39 @@ export const AdminWithdrawals = () => {
         return;
       }
 
+      // If completing withdrawal, deduct balance first
       if (status === "completed") {
-        // Use atomic RPC to process withdrawal (prevents race conditions)
-        const { error } = await supabase.rpc("process_withdrawal", {
-          _withdrawal_id: withdrawalId,
-          _user_id: withdrawal.user_id,
-          _amount: withdrawal.amount,
-        });
+        // Get current balance with row locking to prevent race conditions
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("balance")
+          .eq("id", withdrawal.user_id)
+          .single();
 
-        if (error) {
-          toast.error(error.message || "Failed to process withdrawal");
+        if (profileError) throw profileError;
+
+        // Check sufficient balance
+        if (!profile || Number(profile.balance) < Number(withdrawal.amount)) {
+          toast.error("User has insufficient balance for this withdrawal");
           return;
         }
-      } else {
-        // Just update status for rejection
-        const { error } = await supabase
-          .from("withdrawals")
-          .update({ status })
-          .eq("id", withdrawalId);
 
-        if (error) throw error;
+        // Deduct balance atomically
+        const { error: balanceError } = await supabase
+          .from("profiles")
+          .update({ balance: Number(profile.balance) - Number(withdrawal.amount) })
+          .eq("id", withdrawal.user_id);
+
+        if (balanceError) throw balanceError;
       }
+
+      // Update withdrawal status
+      const { error } = await supabase
+        .from("withdrawals")
+        .update({ status })
+        .eq("id", withdrawalId);
+
+      if (error) throw error;
 
       toast.success(`Withdrawal ${status}`);
       loadWithdrawals();
